@@ -1,0 +1,34 @@
+[project]
+name = "paper-hermes"
+version = "0.1.0"
+description = "MCP Server de veille scientifique — arXiv, ChemRxiv, resume, livraison Telegram"
+requires-python = ">=3.11"
+dependencies = [
+    "arxiv>=2.1",
+    "mcp>=1.0",
+    "httpx>=0.28",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/paper_hermes"]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.15.22",
+]
