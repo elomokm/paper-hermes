@@ -1,4 +1,4 @@
-"""Paper summarizer using LLM via OpenRouter."""
+"""Paper summarizer using DeepSeek API."""
 
 import json
 import os
@@ -31,11 +31,11 @@ class PaperSummarizer:
         self,
         base_url: str | None = None,
         api_key: str | None = None,
-        model: str = "deepseek/deepseek-v4-flash",
+        model: str = "deepseek-chat",
     ):
         self.client = OpenAI(
-            base_url=base_url or "https://openrouter.ai/api/v1",
-            api_key=api_key or os.getenv("OPENROUTER_API_KEY", ""),
+            base_url=base_url or "https://api.deepseek.com/v1",
+            api_key=api_key or os.getenv("DEEPSEEK_API_KEY", ""),
         )
         self.model = model
 
