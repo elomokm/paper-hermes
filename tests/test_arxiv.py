@@ -26,7 +26,6 @@ def test_search_with_sort():
 
 def test_get_paper():
     scraper = ArxivScraper()
-    # Use a known arXiv paper ID
     paper = scraper.get_paper("1706.03762")  # Attention Is All You Need
 
     assert paper is not None

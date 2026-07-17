@@ -1,30 +1,10 @@
-"""arXiv API scraper for Paper Hermes."""
+"""arXiv API scraper using shared models."""
 
-from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Optional
 
 import arxiv
 
-
-@dataclass
-class Paper:
-    """Scientific paper metadata."""
-    id: str
-    title: str
-    authors: list[str] = field(default_factory=list)
-    abstract: str = ""
-    published: Optional[datetime] = None
-    updated: Optional[datetime] = None
-    url: str = ""
-    pdf_url: str = ""
-    categories: list[str] = field(default_factory=list)
-
-    @property
-    def arxiv_id(self) -> str:
-        raw = self.id.split("/")[-1] if "/" in self.id else self.id
-        # Strip version suffix (e.g., "1706.03762v7" -> "1706.03762")
-        return raw.rsplit("v", 1)[0] if "v" in raw else raw
+from paper_hermes.models import Paper
 
 
 class ArxivScraper:
@@ -40,13 +20,6 @@ class ArxivScraper:
         max_results: Optional[int] = None,
         sort_by: str = "submittedDate",
     ) -> list[Paper]:
-        """Search arXiv papers.
-
-        Args:
-            query: Search query (arXiv syntax supported)
-            max_results: Max results (default: self.max_results)
-            sort_by: 'relevance', 'lastUpdatedDate', 'submittedDate'
-        """
         sort_map = {
             "relevance": arxiv.SortCriterion.Relevance,
             "lastUpdatedDate": arxiv.SortCriterion.LastUpdatedDate,
@@ -60,14 +33,9 @@ class ArxivScraper:
             sort_by=sort,
         )
 
-        papers = []
-        for result in self.client.results(search):
-            papers.append(self._to_paper(result))
-
-        return papers
+        return [self._to_paper(r) for r in self.client.results(search)]
 
     def get_paper(self, arxiv_id: str) -> Optional[Paper]:
-        """Fetch a single paper by arXiv ID."""
         search = arxiv.Search(id_list=[arxiv_id])
         result = next(self.client.results(search), None)
         return self._to_paper(result) if result else None
