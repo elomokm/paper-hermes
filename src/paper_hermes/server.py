@@ -11,6 +11,12 @@ from mcp.server.fastmcp import FastMCP
 
 from paper_hermes.arxiv_scraper import ArxivScraper
 from paper_hermes.summarizer import PaperSummarizer
+from paper_hermes.subscriptions import (
+    add_subscription as _add_sub,
+    load_subscriptions,
+    remove_subscription as _remove_sub,
+    update_last_run,
+)
 
 mcp = FastMCP("Paper Hermes", dependencies=["arxiv", "openai"])
 scraper = ArxivScraper(max_results=10)
@@ -106,6 +112,79 @@ def summarize(arxiv_id: str) -> str:
         "relevance_materials": summary.relevance_materials,
     }
     return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def daily_digest(topic: str, since_days: int = 1) -> str:
+    """Get new papers for a subscribed topic since last check. Searches + summarizes.
+
+    Args:
+        topic: Topic key (e.g., 'safran-veille', 'ml-maths'). Must be subscribed first.
+        since_days: Search papers from last N days (default 1 = today's new papers)
+    """
+    from datetime import datetime, timedelta, timezone
+
+    subs = {s["topic"]: s for s in load_subscriptions()}
+    if topic not in subs:
+        return json.dumps({"error": f"Topic '{topic}' not subscribed. Use subscribe() first."})
+
+    query = subs[topic]["query"]
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    papers = scraper.search(query, max_results=5, sort_by="submittedDate")
+
+    # Filter by recency
+    cutoff = datetime.now(timezone.utc) - timedelta(days=since_days)
+    recent = [p for p in papers if p.published and p.published.replace(tzinfo=None) > cutoff]
+
+    if not recent:
+        update_last_run(topic, today)
+        return json.dumps({"digest": [], "message": "Aucun nouveau papier aujourd'hui."})
+
+    digest = []
+    for p in recent:
+        summary = summarizer.summarize(p)
+        digest.append({
+            "id": p.arxiv_id,
+            "title": p.title,
+            "authors": p.authors[:5],
+            "url": p.url,
+            "tl_dr": summary.tl_dr,
+            "key_contributions": summary.key_contributions,
+            "relevance_materials": summary.relevance_materials,
+        })
+
+    update_last_run(topic, today)
+    return json.dumps({"digest": digest, "n_papers": len(digest), "topic": topic, "date": today}, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def subscribe(topic: str, query: str) -> str:
+    """Subscribe to a topic for daily paper digests.
+
+    Args:
+        topic: Short topic key (e.g., 'safran-veille', 'ml-gnn', 'composite-ml')
+        query: arXiv search query. Examples:
+               '\"composite materials\" AND \"machine learning\"',
+               'cat:cond-mat.mtrl-sci AND polymer',
+               'equivariant AND \"neural network\" AND materials'
+    """
+    sub = _add_sub(topic, query)
+    return json.dumps({"subscribed": topic, "query": query, "frequency": sub["frequency"]}, ensure_ascii=False)
+
+
+@mcp.tool()
+def subscriptions() -> str:
+    """List all active subscriptions."""
+    subs = load_subscriptions()
+    return json.dumps(subs, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def unsubscribe(topic: str) -> str:
+    """Remove a subscription."""
+    ok = _remove_sub(topic)
+    return json.dumps({"unsubscribed": topic if ok else None, "success": ok})
 
 
 def main():
