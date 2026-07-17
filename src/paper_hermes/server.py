@@ -181,6 +181,21 @@ def subscriptions() -> str:
 
 
 @mcp.tool()
+def translate(arxiv_id: str) -> str:
+    """Translate a paper's abstract to French using DeepSeek.
+
+    Args:
+        arxiv_id: arXiv paper ID
+    """
+    paper = scraper.get_paper(arxiv_id)
+    if not paper:
+        return json.dumps({"error": f"Paper {arxiv_id} not found"})
+
+    translation = summarizer.translate_abstract(paper.abstract)
+    return json.dumps({"paper_id": paper.arxiv_id, "title": paper.title, "original_abstract": paper.abstract[:300], "translated_abstract": translation}, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
 def unsubscribe(topic: str) -> str:
     """Remove a subscription."""
     ok = _remove_sub(topic)

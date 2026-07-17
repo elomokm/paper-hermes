@@ -10,6 +10,7 @@ class Paper:
     """Scientific paper metadata."""
     id: str
     title: str
+    source: str = "arxiv"  # arxiv | chemrxiv
     authors: list[str] = field(default_factory=list)
     abstract: str = ""
     published: Optional[datetime] = None

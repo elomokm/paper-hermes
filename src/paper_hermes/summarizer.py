@@ -71,3 +71,16 @@ class PaperSummarizer:
             relevance_materials=data.get("relevance_materials", "")[:300],
             translated_abstract="",
         )
+
+    def translate_abstract(self, abstract: str) -> str:
+        """Translate an abstract to French."""
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[{
+                "role": "user",
+                "content": f"Translate this scientific abstract to French. Return ONLY the translation, no commentary:\n\n{abstract[:3000]}"
+            }],
+            temperature=0.1,
+            max_tokens=1000,
+        )
+        return (response.choices[0].message.content or "").strip()
